@@ -30,6 +30,7 @@
 import pygad
 import pandas as pd
 import numpy
+import yfinance as yf
 
 """
 Given the following function:
@@ -38,21 +39,55 @@ Given the following function:
 What are the best values for the 6 weights (w1 to w6)? We are going to use the genetic algorithm to optimize this function.
 """
 
-file_name1 = "Binance_ETHUSDT_d.csv"
-file_name2 = "Binance_BTCUSDT_d.csv"
-col_list = ["Name", "Department"]
-raw_data1 = pd.read_csv(file_name1)
-raw_data2 = pd.read_csv(file_name2)
-function_inputs = [raw_data1, raw_data2]
-# function_inputs = [4, -2, 3.5, 5, -11, -4.7]  # Function inputs.
-desired_output = 44  # Function output.
-
-
 def fitness_func(solution, solution_idx):
     # output = numpy.sum(solution * function_inputs)
     zysk = numpy.sum(solution)
     # fitness = 1.0 / numpy.sum(solution) #maksymalizacja
-    return zysk
+    chosen_crypto = ["BTC-USD"]  # create enum, input from user
+    period = "2mo"  # create enum, input from user
+    crypto_profits = []
+    for crypto in chosen_crypto:
+        data_grouped_by_month = get_crypto_data_grouped_by_month(crypto, period)
+        monthly_profits = calculate_crypto_monthly_profits(data_grouped_by_month)
+        period_profit_per_crypto = calculate_profit(monthly_profits)
+        crypto_profits.append(period_profit_per_crypto)
+    #how to make solutions number the same as chosen currencies number????
+    #use solution and crypto_profits to calculate fitness function value
+    return calculate_profit(crypto_profits)
+
+
+def calculate_crypto_monthly_profits(data_grouped_by_month):
+    monthly_profits = []
+    for month in data_grouped_by_month:
+        daily_profits = calculate_daily_profits(month)
+        monthly_profit = calculate_profit(daily_profits)
+        monthly_profits.append(monthly_profit)
+    return monthly_profits
+
+
+def get_crypto_data_grouped_by_month(crypto, period):
+    ticker = yf.Ticker(crypto)
+    data = ticker.history(period=period)
+    data_grouped_by_month = data.groupby(
+        data.index.month)  # we have to group by something like month and year, because we can have 05.2022 and 05.2023
+    return data_grouped_by_month
+
+
+def calculate_daily_profits(month):
+    daily_profits = []
+    for index in range(len(month[1]["Close"])):
+        day_close_value = month[1]["Close"][index]
+        day_open_value = month[1]["Open"][index]
+        daily_profits.append((day_close_value / day_open_value) - 1)
+    return daily_profits
+
+
+def calculate_profit(arr):
+    array = numpy.array(arr, dtype=numpy.float64)
+    result = (1 + array[0])
+    for element in array:
+        result *= (1 + element)
+    return result - 1
 
 
 fitness_function = fitness_func
@@ -98,7 +133,7 @@ ga_instance.plot_fitness()
 # Returning the details of the best solution.
 solution, solution_fitness, solution_idx = ga_instance.best_solution()
 solutionSum = sum(solution)
-percentageSolution = list(map(lambda x: (x / solutionSum)*100, solution))
+percentageSolution = list(map(lambda x: (x / solutionSum) * 100, solution))
 print("Parameters of the best solution : {solution}".format(solution=percentageSolution))
 print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=solution_fitness))
 print("Index of the best solution : {solution_idx}".format(solution_idx=solution_idx))
