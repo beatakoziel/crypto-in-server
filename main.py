@@ -22,13 +22,8 @@
 #     return fitness
 #
 # ga.fitness_function = fitness
-#
-# ga.run()
-#
-# print(ga.best_individual())
 
 import pygad
-import pandas as pd
 import numpy
 import yfinance as yf
 
@@ -39,21 +34,36 @@ Given the following function:
 What are the best values for the 6 weights (w1 to w6)? We are going to use the genetic algorithm to optimize this function.
 """
 
+
+class CryptoData:
+    def __init__(self, crypto, profit, risk):
+        self.crypto = crypto
+        self.profit = profit
+        self.risk = risk
+
+
 def fitness_func(solution, solution_idx):
-    # output = numpy.sum(solution * function_inputs)
-    zysk = numpy.sum(solution)
     # fitness = 1.0 / numpy.sum(solution) #maksymalizacja
-    chosen_crypto = ["BTC-USD"]  # create enum, input from user
+    #sprawdzenie czy liczba genow zgadza sie z liczbą aktywow do wyliczenia
+    solution_lambda = 0.7  # we don't care about the risk
+    chosen_crypto = ['FB', 'BTC-USD']  # create enum, input from user
     period = "2mo"  # create enum, input from user
-    crypto_profits = []
+    crypto_results = []
     for crypto in chosen_crypto:
-        data_grouped_by_month = get_crypto_data_grouped_by_month(crypto, period)
+        ticker = yf.Ticker(crypto)
+        data = ticker.history(period=period)
+        data_grouped_by_month = get_crypto_data_grouped_by_month(data)
+
         monthly_profits = calculate_crypto_monthly_profits(data_grouped_by_month)
-        period_profit_per_crypto = calculate_profit(monthly_profits)
-        crypto_profits.append(period_profit_per_crypto)
-    #how to make solutions number the same as chosen currencies number????
-    #use solution and crypto_profits to calculate fitness function value
-    return calculate_profit(crypto_profits)
+        crypto_period_profit = calculate_profit(monthly_profits)
+
+        crypto_period_risk = calculate_risk(data)
+
+        crypto_results.append(CryptoData(crypto, crypto_period_profit, crypto_period_risk))
+    result = 0
+    for index, item in enumerate(crypto_results):
+        result += solution[index] * (solution_lambda * item.risk - (1 - solution_lambda) * item.profit)
+    return 1/result
 
 
 def calculate_crypto_monthly_profits(data_grouped_by_month):
@@ -65,11 +75,10 @@ def calculate_crypto_monthly_profits(data_grouped_by_month):
     return monthly_profits
 
 
-def get_crypto_data_grouped_by_month(crypto, period):
-    ticker = yf.Ticker(crypto)
-    data = ticker.history(period=period)
+def get_crypto_data_grouped_by_month(data):
     data_grouped_by_month = data.groupby(
-        data.index.month)  # we have to group by something like month and year, because we can have 05.2022 and 05.2023
+        [data.index.month,
+         data.index.year])  # we have to group by something like month and year, because we can have 05.2022 and 05.2023
     return data_grouped_by_month
 
 
@@ -82,24 +91,31 @@ def calculate_daily_profits(month):
     return daily_profits
 
 
-def calculate_profit(arr):
-    array = numpy.array(arr, dtype=numpy.float64)
+def calculate_profit(array):
+    # array = numpy.array(arr, dtype=numpy.float64)
     result = (1 + array[0])
     for element in array:
         result *= (1 + element)
     return result - 1
 
 
+def calculate_risk(array):
+    daily_average_array = array["Open"]  # here map array to average of open and close daily value
+    average = sum(daily_average_array) / len(daily_average_array)
+    result = list(map(lambda x: ((x - average) ** 2), daily_average_array))
+    return numpy.sqrt(sum(result) / (len(daily_average_array) - 1))
+
+
 fitness_function = fitness_func
 
-num_generations = 100  # Number of generations.
+num_generations = 5  # Number of generations.
 num_parents_mating = 7  # Number of solutions to be selected as parents in the mating pool.
 
 # To prepare the initial population, there are 2 ways:
 # 1) Prepare it yourself and pass it to the initial_population parameter. This way is useful when the user wants to start the genetic algorithm with a custom initial population.
 # 2) Assign valid integer values to the sol_per_pop and num_genes parameters. If the initial_population parameter exists, then the sol_per_pop and num_genes parameters are useless.
-sol_per_pop = 50  # Number of solutions in the population.
-num_genes = len(function_inputs)
+sol_per_pop = 10  # Number of solutions in the population.
+num_genes = 2
 
 last_fitness = 0
 
@@ -121,8 +137,7 @@ ga_instance = pygad.GA(num_generations=num_generations,
                        sol_per_pop=sol_per_pop,
                        num_genes=num_genes,
                        on_generation=callback_generation,
-                       gene_space=[{'low': 0, 'high': 1}, {'low': 0, 'high': 1}],
-                       )
+                       gene_space={'low': 0, 'high': 1})
 
 # Running the GA to optimize the parameters of the function.
 ga_instance.run()
