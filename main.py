@@ -1,38 +1,6 @@
-#
-# from pyeasyga import pyeasyga
-# import pandas as pd
-#
-# file_name1 = "Binance_ETHUSDT_d.csv"
-# file_name2 = "Binance_BTCUSDT_d.csv"
-#
-# col_list = ["Name", "Department"]
-# raw_data1 = pd.read_csv(file_name1)
-# raw_data2 = pd.read_csv(file_name2)
-# # data = [('pear', 50), ('apple', 35), ('banana', 40)]
-# data = [raw_data1, raw_data2]
-# ga = pyeasyga.GeneticAlgorithm(data)
-#
-#
-# def fitness (individual, data):
-#     fitness = 0
-#     if individual.count(1) == 2:
-#         for (selected, (fruit, profit)) in zip(individual, data):
-#             if selected:
-#                 fitness += profit
-#     return fitness
-#
-# ga.fitness_function = fitness
-
 import pygad
 import numpy
 import yfinance as yf
-
-"""
-Given the following function:
-    y = f(w1:w6) = w1x1 + w2x2 + w3x3 + w4x4 + w5x5 + 6wx6
-    where (x1,x2,x3,x4,x5,x6)=(4,-2,3.5,5,-11,-4.7) and y=44
-What are the best values for the 6 weights (w1 to w6)? We are going to use the genetic algorithm to optimize this function.
-"""
 
 
 class CryptoData:
@@ -42,9 +10,24 @@ class CryptoData:
         self.risk = risk
 
 
+class AlgorithmInitialData:
+    def __init__(self, amount, assets, solution_lambda, generations_number, solutions_per_population):
+        self.amount = amount
+        self.assets = assets
+        self.solution_lambda = solution_lambda
+        self.generations_number = generations_number
+        self.solutions_per_population = solutions_per_population
+
+
+class Solution:
+    def __init__(self, asset_name, percentage_solution, money_solution):
+        self.asset_name = asset_name
+        self.percentage_solution = percentage_solution
+        self.money_solution = money_solution
+
+
 def fitness_func(solution, solution_idx):
-    # fitness = 1.0 / numpy.sum(solution) #maksymalizacja
-    #sprawdzenie czy liczba genow zgadza sie z liczbą aktywow do wyliczenia
+    # ustawic liczbe genow na podstawie liczby wybranych aktywow
     solution_lambda = 0.7  # we don't care about the risk
     chosen_crypto = ['FB', 'BTC-USD']  # create enum, input from user
     period = "2mo"  # create enum, input from user
@@ -63,7 +46,7 @@ def fitness_func(solution, solution_idx):
     result = 0
     for index, item in enumerate(crypto_results):
         result += solution[index] * (solution_lambda * item.risk - (1 - solution_lambda) * item.profit)
-    return 1/result
+    return 1 / result
 
 
 def calculate_crypto_monthly_profits(data_grouped_by_month):
@@ -92,7 +75,6 @@ def calculate_daily_profits(month):
 
 
 def calculate_profit(array):
-    # array = numpy.array(arr, dtype=numpy.float64)
     result = (1 + array[0])
     for element in array:
         result *= (1 + element)
@@ -128,30 +110,28 @@ def callback_generation(ga_instance):
     last_fitness = ga_instance.best_solution()[1]
 
 
-# Creating an instance of the GA class inside the ga module. Some parameters are initialized within the constructor.
-ga_instance = pygad.GA(num_generations=num_generations,
-                       init_range_low=0,
-                       init_range_high=1,
-                       num_parents_mating=num_parents_mating,
-                       fitness_func=fitness_function,
-                       sol_per_pop=sol_per_pop,
-                       num_genes=num_genes,
-                       on_generation=callback_generation,
-                       gene_space={'low': 0, 'high': 1})
+def divide_money_between_assets(algorithm_initial_data):
+    # Creating an instance of the GA class inside the ga module. Some parameters are initialized within the constructor.
+    ga_instance = pygad.GA(num_generations=algorithm_initial_data.generations_number,
+                           init_range_low=0,
+                           init_range_high=1,
+                           num_parents_mating=num_parents_mating,
+                           fitness_func=fitness_function,
+                           sol_per_pop=algorithm_initial_data.solutions_per_population,
+                           num_genes=len(algorithm_initial_data.assets),
+                           on_generation=callback_generation,
+                           gene_space={'low': 0, 'high': 1})
+    ga_instance.run()
+    ga_instance.plot_fitness()
+    solution, solution_fitness, solution_idx = ga_instance.best_solution()
+    solution_sum = sum(solution)
+    percentage_solution = list(map(lambda x: (x / solution_sum) * 100, solution))
+    print("Parameters of the best solution : {solution}".format(solution=percentage_solution))
+    print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=solution_fitness))
+    print("Index of the best solution : {solution_idx}".format(solution_idx=solution_idx))
+    prediction = numpy.sum(solution)
+    print("Predicted output based on the best solution : {prediction}".format(prediction=prediction))
+    return list(
+        map(lambda i, x: Solution(algorithm_initial_data.assets[i], x, algorithm_initial_data.amount * (x / 100)),
+            percentage_solution))
 
-# Running the GA to optimize the parameters of the function.
-ga_instance.run()
-
-# After the generations complete, some plots are showed that summarize the how the outputs/fitenss values evolve over generations.
-ga_instance.plot_fitness()
-
-# Returning the details of the best solution.
-solution, solution_fitness, solution_idx = ga_instance.best_solution()
-solutionSum = sum(solution)
-percentageSolution = list(map(lambda x: (x / solutionSum) * 100, solution))
-print("Parameters of the best solution : {solution}".format(solution=percentageSolution))
-print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=solution_fitness))
-print("Index of the best solution : {solution_idx}".format(solution_idx=solution_idx))
-
-prediction = numpy.sum(solution)
-print("Predicted output based on the best solution : {prediction}".format(prediction=prediction))
