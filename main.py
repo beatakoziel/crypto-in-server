@@ -1,3 +1,5 @@
+import json
+
 import pygad
 import numpy
 import yfinance as yf
@@ -9,27 +11,32 @@ class CryptoData:
         self.profit = profit
         self.risk = risk
 
+    def to_json(self):
+        return json.dumps(self, default=lambda o: o.__dict__)
+
 
 class AlgorithmInitialData:
-    def __init__(self, amount, assets, solution_lambda, generations_number, solutions_per_population):
+    def __init__(self, amount, assets, solutionLambda, generationsNumber, solutionsPerPopulation):
         self.amount = amount
         self.assets = assets
-        self.solution_lambda = solution_lambda
-        self.generations_number = generations_number
-        self.solutions_per_population = solutions_per_population
+        self.solutionLambda = solutionLambda
+        self.generationsNumber = generationsNumber
+        self.solutionsPerPopulation = solutionsPerPopulation
 
 
 class Solution:
-    def __init__(self, asset_name, percentage_solution, money_solution):
-        self.asset_name = asset_name
-        self.percentage_solution = percentage_solution
-        self.money_solution = money_solution
+    def __init__(self, assetName, percentageSolution, moneySolution):
+        self.assetName = assetName
+        self.percentageSolution = percentageSolution
+        self.moneySolution = moneySolution
+    def to_json(self):
+        return json.dumps(self, default=lambda o: o.__dict__)
 
 
 def fitness_func(solution, solution_idx):
     # ustawic liczbe genow na podstawie liczby wybranych aktywow
     solution_lambda = 0.7  # we don't care about the risk
-    chosen_crypto = ['FB', 'BTC-USD']  # create enum, input from user
+    chosen_crypto = ['AMZN', 'BTC-USD']  # create enum, input from user
     period = "2mo"  # create enum, input from user
     crypto_results = []
     for crypto in chosen_crypto:
@@ -91,7 +98,7 @@ def calculate_risk(array):
 fitness_function = fitness_func
 
 num_generations = 5  # Number of generations.
-num_parents_mating = 7  # Number of solutions to be selected as parents in the mating pool.
+num_parents_mating = 1  # Number of solutions to be selected as parents in the mating pool.
 
 # To prepare the initial population, there are 2 ways:
 # 1) Prepare it yourself and pass it to the initial_population parameter. This way is useful when the user wants to start the genetic algorithm with a custom initial population.
@@ -112,13 +119,13 @@ def callback_generation(ga_instance):
 
 def divide_money_between_assets(algorithm_initial_data):
     # Creating an instance of the GA class inside the ga module. Some parameters are initialized within the constructor.
-    ga_instance = pygad.GA(num_generations=algorithm_initial_data.generations_number,
+    ga_instance = pygad.GA(num_generations=algorithm_initial_data['generationsNumber'],
                            init_range_low=0,
                            init_range_high=1,
                            num_parents_mating=num_parents_mating,
                            fitness_func=fitness_function,
-                           sol_per_pop=algorithm_initial_data.solutions_per_population,
-                           num_genes=len(algorithm_initial_data.assets),
+                           sol_per_pop=2,
+                           num_genes=len(algorithm_initial_data['assets']),
                            on_generation=callback_generation,
                            gene_space={'low': 0, 'high': 1})
     ga_instance.run()
@@ -131,7 +138,7 @@ def divide_money_between_assets(algorithm_initial_data):
     print("Index of the best solution : {solution_idx}".format(solution_idx=solution_idx))
     prediction = numpy.sum(solution)
     print("Predicted output based on the best solution : {prediction}".format(prediction=prediction))
-    return list(
-        map(lambda i, x: Solution(algorithm_initial_data.assets[i], x, algorithm_initial_data.amount * (x / 100)),
+    result = list(
+        map(lambda x: json.dumps(Solution(2, x, algorithm_initial_data['amount'] * (x / 100)).to_json()),
             percentage_solution))
-
+    return result
