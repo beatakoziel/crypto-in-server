@@ -29,6 +29,7 @@ class Solution:
         self.assetName = assetName
         self.percentageSolution = percentageSolution
         self.moneySolution = moneySolution
+
     def to_json(self):
         return json.dumps(self, default=lambda o: o.__dict__)
 
@@ -139,6 +140,7 @@ def divide_money_between_assets(algorithm_initial_data):
     prediction = numpy.sum(solution)
     print("Predicted output based on the best solution : {prediction}".format(prediction=prediction))
     result = list(
-        map(lambda x: json.dumps(Solution(2, x, algorithm_initial_data['amount'] * (x / 100)).to_json()),
-            percentage_solution))
+        map(lambda i_x: Solution(algorithm_initial_data['assets'][i_x[0]], i_x[1],
+                                 algorithm_initial_data['amount'] * (i_x[1] / 100)).to_json(),
+            enumerate(percentage_solution)))
     return result
