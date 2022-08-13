@@ -134,6 +134,7 @@ def divide_money_between_assets(algorithm_initial_data):
     solution, solution_fitness, solution_idx = ga_instance.best_solution()
     solution_sum = sum(solution)
     percentage_solution = list(map(lambda x: (x / solution_sum) * 100, solution))
+    rounded_percentage_solution = [round(number) for number in percentage_solution]
     print("Parameters of the best solution : {solution}".format(solution=percentage_solution))
     print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=solution_fitness))
     print("Index of the best solution : {solution_idx}".format(solution_idx=solution_idx))
@@ -142,5 +143,5 @@ def divide_money_between_assets(algorithm_initial_data):
     result = list(
         map(lambda i_x: Solution(algorithm_initial_data['assets'][i_x[0]], i_x[1],
                                  algorithm_initial_data['amount'] * (i_x[1] / 100)).to_json(),
-            enumerate(percentage_solution)))
+            enumerate(rounded_percentage_solution)))
     return result
