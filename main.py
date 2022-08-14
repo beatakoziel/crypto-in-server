@@ -35,10 +35,9 @@ class Solution:
 
 
 class GenerationResult:
-    def __init__(self, generation, fitness, change):
+    def __init__(self, generation, fitness):
         self.generation = generation
         self.fitness = fitness
-        self.change = change
 
 
 class AlgorithmResult:
@@ -133,8 +132,7 @@ def callback_generation(ga_instance):
     print("Fitness    = {fitness}".format(fitness=ga_instance.best_solution()[1]))
     print("Change     = {change}".format(change=ga_instance.best_solution()[1] - last_fitness))
     last_fitness = ga_instance.best_solution()[1]
-    generations_results.append(GenerationResult(ga_instance.generations_completed, ga_instance.best_solution()[1],
-                                                ga_instance.best_solution()[1] - last_fitness))
+    generations_results.append(GenerationResult(ga_instance.generations_completed, ga_instance.best_solution()[1]))
 
 
 def divide_money_between_assets(algorithm_initial_data):
