@@ -34,6 +34,23 @@ class Solution:
         return json.dumps(self, default=lambda o: o.__dict__)
 
 
+class GenerationResult:
+    def __init__(self, generation, fitness, change):
+        self.generation = generation
+        self.fitness = fitness
+        self.change = change
+
+
+class AlgorithmResult:
+
+    def __init__(self, solution, generations):
+        self.solution = solution
+        self.generations_results = generations
+
+
+generations_results = []
+
+
 def fitness_func(solution, solution_idx):
     # ustawic liczbe genow na podstawie liczby wybranych aktywow
     solution_lambda = 0.7  # we don't care about the risk
@@ -116,6 +133,8 @@ def callback_generation(ga_instance):
     print("Fitness    = {fitness}".format(fitness=ga_instance.best_solution()[1]))
     print("Change     = {change}".format(change=ga_instance.best_solution()[1] - last_fitness))
     last_fitness = ga_instance.best_solution()[1]
+    generations_results.append(GenerationResult(ga_instance.generations_completed, ga_instance.best_solution()[1],
+                                                ga_instance.best_solution()[1] - last_fitness))
 
 
 def divide_money_between_assets(algorithm_initial_data):
@@ -140,8 +159,10 @@ def divide_money_between_assets(algorithm_initial_data):
     print("Index of the best solution : {solution_idx}".format(solution_idx=solution_idx))
     prediction = numpy.sum(solution)
     print("Predicted output based on the best solution : {prediction}".format(prediction=prediction))
-    result = json.dumps(list(
+    solution = list(
         map(lambda i_x: Solution(algorithm_initial_data['assets'][i_x[0]], i_x[1],
                                  algorithm_initial_data['amount'] * (i_x[1] / 100)),
-            enumerate(rounded_percentage_solution))), default=lambda o: o.__dict__)
+            enumerate(rounded_percentage_solution)))
+    result = json.dumps(AlgorithmResult(solution, generations_results), default=lambda o: o.__dict__)
+    generations_results.clear()
     return result
