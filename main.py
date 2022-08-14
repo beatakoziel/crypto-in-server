@@ -18,6 +18,7 @@ class CryptoData:
 class AlgorithmInitialData:
     def __init__(self, amount, assets, solutionLambda, generationsNumber, solutionsPerPopulation):
         self.amount = amount
+        self.period = period
         self.assets = assets
         self.solutionLambda = solutionLambda
         self.generationsNumber = generationsNumber
@@ -49,12 +50,11 @@ class AlgorithmResult:
 
 generations_results = []
 
-
+fitness_function_lambda = 0.5  # we don't care about the risk
+chosen_crypto = []  # create enum, input from user
+period = "2mo"  # create enum, input from user
 def fitness_func(solution, solution_idx):
     # ustawic liczbe genow na podstawie liczby wybranych aktywow
-    solution_lambda = 0.7  # we don't care about the risk
-    chosen_crypto = ['AMZN', 'BTC-USD']  # create enum, input from user
-    period = "2mo"  # create enum, input from user
     crypto_results = []
     for crypto in chosen_crypto:
         ticker = yf.Ticker(crypto)
@@ -69,7 +69,7 @@ def fitness_func(solution, solution_idx):
         crypto_results.append(CryptoData(crypto, crypto_period_profit, crypto_period_risk))
     result = 0
     for index, item in enumerate(crypto_results):
-        result += solution[index] * (solution_lambda * item.risk - (1 - solution_lambda) * item.profit)
+        result += solution[index] * (fitness_function_lambda * item.risk - (1 - fitness_function_lambda) * item.profit)
     return 1 / result
 
 
@@ -136,6 +136,10 @@ def callback_generation(ga_instance):
 
 
 def divide_money_between_assets(algorithm_initial_data):
+    global fitness_function_lambda, chosen_crypto, period
+    fitness_function_lambda = algorithm_initial_data['lambda']
+    chosen_crypto = algorithm_initial_data['assets']
+    period = algorithm_initial_data['period']
     # Creating an instance of the GA class inside the ga module. Some parameters are initialized within the constructor.
     ga_instance = pygad.GA(num_generations=algorithm_initial_data['generationsNumber'],
                            init_range_low=0,

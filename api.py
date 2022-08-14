@@ -23,7 +23,15 @@ def calculate():
 
 @app.route('/info/assets', methods=['GET'])
 def get_assets_list():
-    return flask.jsonify(["FB", "AMZN"])
+    return flask.jsonify(
+        ["AAPL", "BTC-USD", "TSLA", "ETH-USD", "MSFT", "NVDA", "DOGE-USD", "JNJ", "INTC", "ABNB", "SHIB-USD", "FRZA",
+         "FB", "DOT-USD", "AMZN"])
+
+
+@app.route('/info/periods', methods=['GET'])
+def get_periods_list():
+    return flask.jsonify(
+        ["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y"])
 
 
 app.run()
