@@ -140,8 +140,8 @@ def divide_money_between_assets(algorithm_initial_data):
     print("Index of the best solution : {solution_idx}".format(solution_idx=solution_idx))
     prediction = numpy.sum(solution)
     print("Predicted output based on the best solution : {prediction}".format(prediction=prediction))
-    result = list(
+    result = json.dumps(list(
         map(lambda i_x: Solution(algorithm_initial_data['assets'][i_x[0]], i_x[1],
-                                 algorithm_initial_data['amount'] * (i_x[1] / 100)).to_json(),
-            enumerate(rounded_percentage_solution)))
+                                 algorithm_initial_data['amount'] * (i_x[1] / 100)),
+            enumerate(rounded_percentage_solution))), default=lambda o: o.__dict__)
     return result
