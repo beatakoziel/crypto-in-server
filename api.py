@@ -31,7 +31,7 @@ def get_assets_list():
 @app.route('/info/periods', methods=['GET'])
 def get_periods_list():
     return flask.jsonify(
-        ["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y"])
+        ["1mo", "3mo", "6mo", "1y", "2y", "5y", "10y"])
 
 
 app.run()

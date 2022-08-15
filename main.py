@@ -15,16 +15,6 @@ class CryptoData:
         return json.dumps(self, default=lambda o: o.__dict__)
 
 
-class AlgorithmInitialData:
-    def __init__(self, amount, assets, solutionLambda, generationsNumber, solutionsPerPopulation):
-        self.amount = amount
-        self.period = period
-        self.assets = assets
-        self.solutionLambda = solutionLambda
-        self.generationsNumber = generationsNumber
-        self.solutionsPerPopulation = solutionsPerPopulation
-
-
 class Solution:
     def __init__(self, assetName, percentageSolution, moneySolution):
         self.assetName = assetName
@@ -53,6 +43,8 @@ generations_results = []
 fitness_function_lambda = 0.5  # we don't care about the risk
 chosen_crypto = []  # create enum, input from user
 period = "2mo"  # create enum, input from user
+
+
 def fitness_func(solution, solution_idx):
     # ustawic liczbe genow na podstawie liczby wybranych aktywow
     crypto_results = []
@@ -146,10 +138,18 @@ def divide_money_between_assets(algorithm_initial_data):
                            init_range_high=1,
                            num_parents_mating=num_parents_mating,
                            fitness_func=fitness_function,
-                           sol_per_pop=2,
+                           sol_per_pop=algorithm_initial_data['solutionsPerPopulation'],
                            num_genes=len(algorithm_initial_data['assets']),
                            on_generation=callback_generation,
-                           gene_space={'low': 0, 'high': 1})
+                           gene_space={'low': 0, 'high': 1},
+                           parent_selection_type=algorithm_initial_data['parentSelectionType'],
+                           K_tournament=algorithm_initial_data['kTournament'],
+                           keep_parents=algorithm_initial_data['keepParents'],
+                           crossover_type=algorithm_initial_data['crossoverType'],
+                           crossover_probability=algorithm_initial_data['crossoverProbability'],
+                           mutation_type=algorithm_initial_data['mutationType'],
+                           mutation_probability=algorithm_initial_data['mutationProbability']
+                           )
     ga_instance.run()
     ga_instance.plot_fitness()
     solution, solution_fitness, solution_idx = ga_instance.best_solution()
