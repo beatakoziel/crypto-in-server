@@ -1,7 +1,7 @@
 import unittest
 
-
-from main import calculate_profit, calculate_crypto_monthly_profits, calculate_risk, calculate_lambda_result
+from main import calculate_profit, calculate_crypto_monthly_profits, calculate_risk, calculate_lambda_result, \
+    prepare_data_for_algorithm, calculate_ranking
 
 from main import get_crypto_data_grouped_by_month
 import yfinance as yf
@@ -36,6 +36,34 @@ class TestCalculateProfitMethods(unittest.TestCase):
     def test_calculate_lambda_result(self):
         lambda_result = calculate_lambda_result(0.1, 3170.6370673714005, -0.20188743030570167)
         self.assertEqual(lambda_result, 317.2454054244152)
+
+    def test_prepare_data_for_algorithm(self):
+        prepare_data_for_algorithm({"lambdaValue": 0.5, "assets": ["BTC-USD"], "period": "1mo", "periodType": "period"})
+
+    def test_calculate_ranking(self):
+        result = calculate_ranking({
+            "periodType": "period",
+            "period": "1mo",
+            "startDate": "2021-01-01",
+            "endDate": "2022-01-01",
+            "assets": [
+                "ETH-USD",
+                "BTC-USD"
+            ],
+            "lambdaValue": 0.5,
+            "generationsNumber": 10,
+            "solutionsPerPopulation": 10,
+            "parentsMatingNumber": 1,
+            "parentSelectionType": "sss",
+            "kTournament": 3,
+            "keepParents": -1,
+            "crossoverType": "single_point",
+            "crossoverProbability": None,
+            "mutationType": "random",
+            "mutationProbability": None
+        })
+        self.assertIsNotNone(result)
+
 
 if __name__ == '__main__':
     unittest.main()

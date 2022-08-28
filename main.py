@@ -4,40 +4,7 @@ import pygad
 import numpy
 import yfinance as yf
 
-
-class CryptoData:
-    def __init__(self, crypto, profit, risk):
-        self.crypto = crypto
-        self.profit = profit
-        self.risk = risk
-
-    def to_json(self):
-        return json.dumps(self, default=lambda o: o.__dict__)
-
-
-class Solution:
-    def __init__(self, assetName, percentageSolution, profit, risk):
-        self.assetName = assetName
-        self.percentageSolution = percentageSolution
-        self.profit = profit
-        self.risk = risk
-
-    def to_json(self):
-        return json.dumps(self, default=lambda o: o.__dict__)
-
-
-class GenerationResult:
-    def __init__(self, generation, fitness):
-        self.generation = generation
-        self.fitness = fitness
-
-
-class AlgorithmResult:
-
-    def __init__(self, solution, generations):
-        self.solution = solution
-        self.generations_results = generations
-
+from models import GenerationResult, Solution, AlgorithmResult, CryptoData
 
 generations_results = []
 
@@ -163,9 +130,8 @@ def print_result(percentage_solution, solution, solution_fitness, solution_idx):
 
 def prepare_data_for_algorithm(algorithm_initial_data):
     global fitness_function_lambda, chosen_crypto, period, crypto_results
-    fitness_function_lambda = algorithm_initial_data['lambda']
+    fitness_function_lambda = algorithm_initial_data['lambdaValue']
     chosen_crypto = algorithm_initial_data['assets']
-    period = algorithm_initial_data['period']
 
     generations_results.clear()
     crypto_results.clear()
