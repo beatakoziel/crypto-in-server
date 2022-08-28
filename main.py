@@ -16,10 +16,11 @@ class CryptoData:
 
 
 class Solution:
-    def __init__(self, assetName, percentageSolution, moneySolution):
+    def __init__(self, assetName, percentageSolution, profit, risk):
         self.assetName = assetName
         self.percentageSolution = percentageSolution
-        self.moneySolution = moneySolution
+        self.profit = profit
+        self.risk = risk
 
     def to_json(self):
         return json.dumps(self, default=lambda o: o.__dict__)
@@ -40,29 +41,30 @@ class AlgorithmResult:
 
 generations_results = []
 
-fitness_function_lambda = 0.5  # we don't care about the risk
-chosen_crypto = []  # create enum, input from user
-period = "2mo"  # create enum, input from user
+fitness_function_lambda = 0.5
+chosen_crypto = []
+crypto_results = []
+period = "2mo"
 
 
-def fitness_func(solution, solution_idx):
-    # ustawic liczbe genow na podstawie liczby wybranych aktywow
-    crypto_results = []
-    for crypto in chosen_crypto:
-        ticker = yf.Ticker(crypto)
-        data = ticker.history(period=period)
-        data_grouped_by_month = get_crypto_data_grouped_by_month(data)
-
-        monthly_profits = calculate_crypto_monthly_profits(data_grouped_by_month)
-        crypto_period_profit = calculate_profit(monthly_profits)
-
-        crypto_period_risk = calculate_risk(data)
-
-        crypto_results.append(CryptoData(crypto, crypto_period_profit, crypto_period_risk))
+def fitness_func(solution, sol_indx):
     result = 0
+    solution_sum = sum(solution)
+    percentage_solution = list(map(lambda x: (x / solution_sum) * 100, solution))
     for index, item in enumerate(crypto_results):
-        result += solution[index] * (fitness_function_lambda * item.risk - (1 - fitness_function_lambda) * item.profit)
+        result += percentage_solution[index] * calculate_lambda_result(fitness_function_lambda, item.risk, item.profit)
     return 1 / result
+
+
+def calculate_lambda_result(lambda_value, risk, profit):
+    return lambda_value * risk - (1 - lambda_value) * profit
+
+
+def get_crypto_data_grouped_by_month(data):
+    data_grouped_by_month = data.groupby(
+        [data.index.month,
+         data.index.year])
+    return data_grouped_by_month
 
 
 def calculate_crypto_monthly_profits(data_grouped_by_month):
@@ -72,13 +74,6 @@ def calculate_crypto_monthly_profits(data_grouped_by_month):
         monthly_profit = calculate_profit(daily_profits)
         monthly_profits.append(monthly_profit)
     return monthly_profits
-
-
-def get_crypto_data_grouped_by_month(data):
-    data_grouped_by_month = data.groupby(
-        [data.index.month,
-         data.index.year])  # we have to group by something like month and year, because we can have 05.2022 and 05.2023
-    return data_grouped_by_month
 
 
 def calculate_daily_profits(month):
@@ -98,21 +93,17 @@ def calculate_profit(array):
 
 
 def calculate_risk(array):
-    daily_average_array = array["Open"]  # here map array to average of open and close daily value
+    daily_average_array = array["Open"]
     average = sum(daily_average_array) / len(daily_average_array)
     result = list(map(lambda x: ((x - average) ** 2), daily_average_array))
-    return numpy.sqrt(sum(result) / (len(daily_average_array) - 1))
+    return numpy.sqrt((sum(result) / len(daily_average_array)))
 
 
 fitness_function = fitness_func
 
-num_generations = 5  # Number of generations.
-num_parents_mating = 1  # Number of solutions to be selected as parents in the mating pool.
-
-# To prepare the initial population, there are 2 ways:
-# 1) Prepare it yourself and pass it to the initial_population parameter. This way is useful when the user wants to start the genetic algorithm with a custom initial population.
-# 2) Assign valid integer values to the sol_per_pop and num_genes parameters. If the initial_population parameter exists, then the sol_per_pop and num_genes parameters are useless.
-sol_per_pop = 10  # Number of solutions in the population.
+num_generations = 5
+num_parents_mating = 1
+sol_per_pop = 10
 num_genes = 2
 
 last_fitness = 0
@@ -127,16 +118,13 @@ def callback_generation(ga_instance):
     generations_results.append(GenerationResult(ga_instance.generations_completed, ga_instance.best_solution()[1]))
 
 
-def divide_money_between_assets(algorithm_initial_data):
-    global fitness_function_lambda, chosen_crypto, period
-    fitness_function_lambda = algorithm_initial_data['lambda']
-    chosen_crypto = algorithm_initial_data['assets']
-    period = algorithm_initial_data['period']
+def calculate_ranking(algorithm_initial_data):
+    prepare_data_for_algorithm(algorithm_initial_data)
     # Creating an instance of the GA class inside the ga module. Some parameters are initialized within the constructor.
     ga_instance = pygad.GA(num_generations=algorithm_initial_data['generationsNumber'],
                            init_range_low=0,
                            init_range_high=1,
-                           num_parents_mating=num_parents_mating,
+                           num_parents_mating=algorithm_initial_data['parentsMatingNumber'],
                            fitness_func=fitness_function,
                            sol_per_pop=algorithm_initial_data['solutionsPerPopulation'],
                            num_genes=len(algorithm_initial_data['assets']),
@@ -151,20 +139,48 @@ def divide_money_between_assets(algorithm_initial_data):
                            mutation_probability=algorithm_initial_data['mutationProbability']
                            )
     ga_instance.run()
-    ga_instance.plot_fitness()
+
     solution, solution_fitness, solution_idx = ga_instance.best_solution()
     solution_sum = sum(solution)
     percentage_solution = list(map(lambda x: (x / solution_sum) * 100, solution))
-    rounded_percentage_solution = [round(number) for number in percentage_solution]
+    rounded_percentage_solution = [round(number, 2) for number in percentage_solution]
+    print_result(percentage_solution, solution, solution_fitness, solution_idx)
+    solution = list(
+        map(lambda i_x: Solution(algorithm_initial_data['assets'][i_x[0]], i_x[1],
+                                 round(crypto_results[i_x[0]].profit, 2),
+                                 round(crypto_results[i_x[0]].risk, 2)),
+            enumerate(rounded_percentage_solution)))
+    return json.dumps(AlgorithmResult(solution, generations_results), default=lambda o: o.__dict__)
+
+
+def print_result(percentage_solution, solution, solution_fitness, solution_idx):
     print("Parameters of the best solution : {solution}".format(solution=percentage_solution))
     print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=solution_fitness))
     print("Index of the best solution : {solution_idx}".format(solution_idx=solution_idx))
     prediction = numpy.sum(solution)
     print("Predicted output based on the best solution : {prediction}".format(prediction=prediction))
-    solution = list(
-        map(lambda i_x: Solution(algorithm_initial_data['assets'][i_x[0]], i_x[1],
-                                 algorithm_initial_data['amount'] * (i_x[1] / 100)),
-            enumerate(rounded_percentage_solution)))
-    result = json.dumps(AlgorithmResult(solution, generations_results), default=lambda o: o.__dict__)
+
+
+def prepare_data_for_algorithm(algorithm_initial_data):
+    global fitness_function_lambda, chosen_crypto, period, crypto_results
+    fitness_function_lambda = algorithm_initial_data['lambda']
+    chosen_crypto = algorithm_initial_data['assets']
+    period = algorithm_initial_data['period']
+
     generations_results.clear()
-    return result
+    crypto_results.clear()
+
+    for crypto in chosen_crypto:
+        ticker = yf.Ticker(crypto)
+        if algorithm_initial_data['periodType'] == "period":
+            data = ticker.history(period=algorithm_initial_data['period'])
+        else:
+            data = ticker.history(start=algorithm_initial_data['startDate'], end=algorithm_initial_data['endDate'])
+        data_grouped_by_month = get_crypto_data_grouped_by_month(data)
+
+        monthly_profits = calculate_crypto_monthly_profits(data_grouped_by_month)
+        crypto_period_profit = calculate_profit(monthly_profits)
+
+        crypto_period_risk = calculate_risk(data)
+
+        crypto_results.append(CryptoData(crypto, crypto_period_profit, crypto_period_risk))

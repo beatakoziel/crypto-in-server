@@ -5,7 +5,7 @@ from flask import request, Response
 
 from flask_cors import CORS
 
-from main import divide_money_between_assets
+from main import calculate_ranking
 
 app = flask.Flask(__name__)
 app.config["DEBUG"] = True
@@ -17,15 +17,14 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 @app.route('/calculator/divide', methods=['POST'])
 def calculate():
     algorithm_initial_data = request.json
-    response = divide_money_between_assets(algorithm_initial_data)
+    response = calculate_ranking(algorithm_initial_data)
     return Response(response)
 
 
 @app.route('/info/assets', methods=['GET'])
 def get_assets_list():
     return flask.jsonify(
-        ["AAPL", "BTC-USD", "TSLA", "ETH-USD", "MSFT", "NVDA", "DOGE-USD", "JNJ", "INTC", "ABNB", "SHIB-USD", "FRZA",
-         "FB", "DOT-USD", "AMZN"])
+        ["BTC-USD", "ETH-USD", "DOGE-USD", "SHIB-USD", "DOT-USD", "AMZN", "DLTR", "LUNA-USD", "MANA-USD"])
 
 
 @app.route('/info/periods', methods=['GET'])
