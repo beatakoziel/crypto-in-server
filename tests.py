@@ -10,9 +10,12 @@ import yfinance as yf
 class TestCalculateProfitMethods(unittest.TestCase):
 
     def test_get_crypto_data_grouped_by_month(self):
+        # given
         ticker = yf.Ticker("BTC-USD")
         data = ticker.history(start="2022-01-01", end="2022-03-01")
+        # when
         grouped_data = get_crypto_data_grouped_by_month(data)
+        # then
         self.assertEqual(len(grouped_data), 3)
 
     def test_calculate_crypto_monthly_profits(self):

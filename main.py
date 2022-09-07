@@ -87,7 +87,6 @@ def callback_generation(ga_instance):
 
 def calculate_ranking(algorithm_initial_data):
     prepare_data_for_algorithm(algorithm_initial_data)
-    # Creating an instance of the GA class inside the ga module. Some parameters are initialized within the constructor.
     ga_instance = pygad.GA(num_generations=algorithm_initial_data['generationsNumber'],
                            init_range_low=0,
                            init_range_high=1,
@@ -107,6 +106,10 @@ def calculate_ranking(algorithm_initial_data):
                            )
     ga_instance.run()
 
+    return prepare_solution(ga_instance, algorithm_initial_data)
+
+
+def prepare_solution(ga_instance, algorithm_initial_data):
     solution, solution_fitness, solution_idx = ga_instance.best_solution()
     solution_sum = sum(solution)
     percentage_solution = list(map(lambda x: (x / solution_sum) * 100, solution))
